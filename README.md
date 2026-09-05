@@ -45,6 +45,13 @@ AI <what you want> <TAB>
 
 TAB behaves normally for any buffer that does not start with `AI `.
 
+Pressing Enter instead of TAB also works. `AI` is defined as a command, so the generated line is pushed onto the next prompt for you to edit or run:
+
+```
+$ AI find files over 100MB modified this week
+$ find . -type f -size +100M -mtime -7█
+```
+
 The generator is also a plain function, useful in scripts or to preview without zle:
 
 ```zsh

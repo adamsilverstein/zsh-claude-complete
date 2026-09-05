@@ -4,6 +4,8 @@
 #
 #   Type:  AI <describe what you want> <TAB>
 #   Result: the buffer is replaced with the generated command.
+#   Pressing Enter instead of TAB also works: the generated command is
+#   placed on the next prompt line for editing.
 #
 # Backends (ZSH_AI_BACKEND):
 #   api  - Anthropic Messages API via curl. Needs curl, jq, and either
@@ -166,6 +168,16 @@ _zsh_ai_widget() {
     zle expand-or-complete
   fi
 }
+
+# Enter fallback: running "AI <request>" as a command generates the command and
+# pushes it onto the next prompt line with print -z, so it can be edited before
+# it runs. The function is named after ZSH_AI_PREFIX at source time.
+_zsh_ai_command() {
+  local cmd
+  cmd=$(zsh_ai_generate "$@") || return 1
+  print -z -- "$cmd"
+}
+functions[$ZSH_AI_PREFIX]=$functions[_zsh_ai_command]
 
 zle -N _zsh_ai_widget
 if [[ -n "$ZSH_AI_KEY" ]]; then
