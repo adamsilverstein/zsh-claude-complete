@@ -109,6 +109,10 @@ zsh test/smoke.zsh
 ZSH_AI_BACKEND=cli zsh test/smoke.zsh
 ```
 
+## Credits
+
+Inspired by tott's zsh-ai-complete, which introduced the "type a request, press TAB" idea for OpenAI-compatible APIs: https://github.com/tott/zsh-ai-complete. This is a separate implementation targeting Claude.
+
 ## License
 
 MIT
