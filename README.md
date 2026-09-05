@@ -65,8 +65,9 @@ All options are environment variables. Set them before or after sourcing.
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `ZSH_AI_BACKEND` | `api` if `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` is set, else `cli` | `api` (Anthropic Messages API via curl) or `cli` (`claude -p`) |
-| `ZSH_AI_MODEL` | `claude-opus-5` | Model id passed to either backend |
-| `ZSH_AI_EFFORT` | `low` | Anthropic effort level, api backend only. Low keeps TAB snappy |
+| `ZSH_AI_MODEL` | `claude-sonnet-5` | Model id passed to either backend |
+| `ZSH_AI_EFFORT` | `low` | Effort level passed to either backend. Low keeps TAB snappy |
+| `ZSH_AI_THINKING` | `disabled` | Thinking mode for the api backend, `disabled` or `adaptive` |
 | `ZSH_AI_MAX_TOKENS` | `512` | Output cap, api backend only |
 | `ZSH_AI_PREFIX` | `AI` | Trigger word at the start of the buffer |
 | `ZSH_AI_KEY` | `^I` (TAB) | Key to bind. Set to an empty string to bind nothing and call `bindkey` yourself |
@@ -75,7 +76,11 @@ All options are environment variables. Set them before or after sourcing.
 Examples:
 
 ```zsh
-# Cheaper and faster
+# Smarter but slower
+export ZSH_AI_MODEL=claude-opus-5
+export ZSH_AI_THINKING=adaptive
+
+# Cheapest and fastest
 export ZSH_AI_MODEL=claude-haiku-4-5
 
 # Keep TAB for normal completion, use Ctrl-X Ctrl-A instead
@@ -84,6 +89,10 @@ export ZSH_AI_KEY='^X^A'
 # Force Claude Code even when an API key is present
 export ZSH_AI_BACKEND=cli
 ```
+
+## Speed
+
+The defaults are tuned for latency: Sonnet, thinking off, low effort, short output cap. The `api` backend is the faster of the two because the `cli` backend pays several seconds of Claude Code startup on every request. If you have an API key, set it and the plugin will prefer the API automatically.
 
 ## How it works
 

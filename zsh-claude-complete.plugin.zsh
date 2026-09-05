@@ -15,16 +15,19 @@
 #
 # Options (all environment variables, set before sourcing or any time after):
 #   ZSH_AI_PREFIX    Trigger word at the start of the buffer. Default: "AI"
-#   ZSH_AI_MODEL     Model id. Default: claude-opus-5
-#   ZSH_AI_EFFORT    Anthropic effort level for the api backend. Default: low
+#   ZSH_AI_MODEL     Model id. Default: claude-sonnet-5
+#   ZSH_AI_EFFORT    Effort level passed to either backend. Default: low
+#   ZSH_AI_THINKING  Thinking mode for the api backend: disabled or adaptive.
+#                    Default: disabled (fastest)
 #   ZSH_AI_MAX_TOKENS  Output cap for the api backend. Default: 512
 #   ZSH_AI_KEY       Key to bind. Default: '^I' (TAB). Set to "" to skip binding.
 #   ZSH_AI_DEBUG     When set, the last raw response is written to
 #                    $ZSH_AI_DEBUG (a file path).
 
 : ${ZSH_AI_PREFIX:=AI}
-: ${ZSH_AI_MODEL:=claude-opus-5}
+: ${ZSH_AI_MODEL:=claude-sonnet-5}
 : ${ZSH_AI_EFFORT:=low}
+: ${ZSH_AI_THINKING:=disabled}
 : ${ZSH_AI_MAX_TOKENS:=512}
 : ${ZSH_AI_KEY:=^I}
 
@@ -72,6 +75,7 @@ _zsh_ai_generate_api() {
   body=$(jq -n \
     --arg model "$ZSH_AI_MODEL" \
     --arg effort "$ZSH_AI_EFFORT" \
+    --arg thinking "$ZSH_AI_THINKING" \
     --argjson max_tokens "$ZSH_AI_MAX_TOKENS" \
     --arg system "$system" \
     --arg prompt "$prompt" \
@@ -79,6 +83,7 @@ _zsh_ai_generate_api() {
       model: $model,
       max_tokens: $max_tokens,
       output_config: { effort: $effort },
+      thinking: { type: $thinking },
       system: $system,
       messages: [ { role: "user", content: $prompt } ]
     }') || return 1
@@ -108,7 +113,8 @@ _zsh_ai_generate_api() {
   print -r -- "$response" | jq -r '[.content[] | select(.type == "text") | .text] | join("")'
 }
 
-# Claude Code headless mode. No tools, no session file, model from ZSH_AI_MODEL.
+# Claude Code headless mode. No tools, no session file, low effort. Most of the
+# latency here is CLI startup; the api backend is noticeably faster.
 _zsh_ai_generate_cli() {
   local prompt="$1" system="$2" out
 
@@ -117,6 +123,7 @@ _zsh_ai_generate_cli() {
   out=$(command claude -p "$prompt" \
     --system-prompt "$system" \
     --model "$ZSH_AI_MODEL" \
+    --effort "$ZSH_AI_EFFORT" \
     --tools "" \
     --no-session-persistence 2>/dev/null) || { print "zsh-claude-complete: claude -p failed" >&2; return 1; }
 
