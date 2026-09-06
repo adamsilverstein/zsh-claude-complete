@@ -8,10 +8,13 @@
 #   placed on the next prompt line for editing.
 #
 # Backends (ZSH_AI_BACKEND):
+#   cli  - Claude Code headless mode (`claude -p`) using your Claude account.
+#          No API key needed. If you are not signed in, the plugin tells you
+#          and `zsh_ai_login` walks you through the browser login.
 #   api  - Anthropic Messages API via curl. Needs curl, jq, and either
 #          ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN (OAuth bearer token).
-#   cli  - Claude Code headless mode (`claude -p`). Uses your existing login.
-#   Default: "api" when ANTHROPIC_API_KEY is set, otherwise "cli".
+#   Default: "api" when ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN is set,
+#   otherwise "cli".
 #
 # Options (all environment variables, set before sourcing or any time after):
 #   ZSH_AI_PREFIX    Trigger word at the start of the buffer. Default: "AI"
@@ -52,6 +55,52 @@ _zsh_ai_backend() {
     print -r -- api
   else
     print -r -- cli
+  fi
+}
+
+# The cli backend always runs claude with API credentials removed from the
+# environment, so it uses the Claude account login even when a key is exported.
+_zsh_ai_claude() {
+  env -u ANTHROPIC_API_KEY -u ANTHROPIC_AUTH_TOKEN claude "$@"
+}
+
+# True when Claude Code has an account login. Cheap (about 0.1s).
+_zsh_ai_logged_in() {
+  (( $+commands[claude] )) || return 1
+  local status_json
+  status_json=$(_zsh_ai_claude auth status --json 2>/dev/null) || return 1
+  [[ "$status_json" == *'"loggedIn": true'* ]]
+}
+
+_zsh_ai_login_hint() {
+  print "zsh-claude-complete: not signed in to Claude. Run zsh_ai_login to sign in through your browser." >&2
+}
+
+# Public: guided browser login for the cli backend.
+#   zsh_ai_login
+# Opens the Claude sign-in page in your browser, then confirms the result.
+zsh_ai_login() {
+  (( $+commands[claude] )) || {
+    print "zsh-claude-complete: claude CLI not found. Install Claude Code first: https://claude.com/claude-code" >&2
+    return 1
+  }
+  if _zsh_ai_logged_in; then
+    print "zsh-claude-complete: already signed in."
+    _zsh_ai_claude auth status --text 2>/dev/null | sed 's/^/  /'
+    return 0
+  fi
+  print "zsh-claude-complete: opening the Claude sign-in page in your browser..."
+  print "  Sign in with your Claude account, then return to this terminal."
+  _zsh_ai_claude auth login "$@" || {
+    print "zsh-claude-complete: sign-in did not complete." >&2
+    return 1
+  }
+  if _zsh_ai_logged_in; then
+    print "zsh-claude-complete: signed in. Try: ${ZSH_AI_PREFIX} list files modified today <TAB>"
+    _zsh_ai_claude auth status --text 2>/dev/null | sed 's/^/  /'
+  else
+    print "zsh-claude-complete: sign-in did not complete." >&2
+    return 1
   fi
 }
 
@@ -113,18 +162,25 @@ _zsh_ai_generate_api() {
   print -r -- "$response" | jq -r '[.content[] | select(.type == "text") | .text] | join("")'
 }
 
-# Claude Code headless mode. No tools, no session file, low effort. Most of the
-# latency here is CLI startup; the api backend is noticeably faster.
+# Claude Code headless mode using the account login. No tools, no session
+# file, no settings, hooks, plugins, or MCP servers: skipping those cuts CLI
+# startup from several seconds to roughly two.
 _zsh_ai_generate_cli() {
   local prompt="$1" system="$2" out
 
-  (( $+commands[claude] )) || { print "zsh-claude-complete: claude CLI not found" >&2; return 1; }
+  (( $+commands[claude] )) || {
+    print "zsh-claude-complete: claude CLI not found. Install Claude Code first: https://claude.com/claude-code" >&2
+    return 1
+  }
+  _zsh_ai_logged_in || { _zsh_ai_login_hint; return 1; }
 
-  out=$(command claude -p "$prompt" \
+  out=$(_zsh_ai_claude -p "$prompt" \
     --system-prompt "$system" \
     --model "$ZSH_AI_MODEL" \
     --effort "$ZSH_AI_EFFORT" \
     --tools "" \
+    --setting-sources "" \
+    --strict-mcp-config \
     --no-session-persistence 2>/dev/null) || { print "zsh-claude-complete: claude -p failed" >&2; return 1; }
 
   [[ -n "$ZSH_AI_DEBUG" ]] && print -r -- "$out" > "$ZSH_AI_DEBUG"
@@ -181,6 +237,23 @@ _zsh_ai_widget() {
 # it runs. The function is named after ZSH_AI_PREFIX at source time.
 _zsh_ai_command() {
   local cmd
+  if [[ "$(_zsh_ai_backend)" == cli ]] && (( $+commands[claude] )) && ! _zsh_ai_logged_in; then
+    print "zsh-claude-complete: not signed in to Claude."
+    if [[ -t 0 ]]; then
+      local reply
+      read -q "reply?Sign in through your browser now? [y/N] "
+      print
+      if [[ "$reply" == y ]]; then
+        zsh_ai_login || return 1
+      else
+        _zsh_ai_login_hint
+        return 1
+      fi
+    else
+      _zsh_ai_login_hint
+      return 1
+    fi
+  fi
   cmd=$(zsh_ai_generate "$@") || return 1
   print -z -- "$cmd"
 }
