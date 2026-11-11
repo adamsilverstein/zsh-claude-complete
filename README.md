@@ -45,7 +45,7 @@ The account backend always ignores `ANTHROPIC_API_KEY`, so it uses your Claude s
 
 ### Or use an API key
 
-If `ANTHROPIC_API_KEY` is set, the plugin uses the Anthropic API directly instead. This is the faster path and bills API usage:
+If `ANTHROPIC_API_KEY` is set, the plugin uses the Anthropic API directly by default, unless `ZSH_AI_BACKEND=cli` says otherwise. This is the faster path and bills API usage:
 
 ```zsh
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -74,7 +74,7 @@ zsh_ai_generate "count lines in all markdown files under docs"
 
 ## Configuration
 
-All options are environment variables. Set them before or after sourcing.
+All options are environment variables. Set them before or after sourcing, except `ZSH_AI_PREFIX` and `ZSH_AI_KEY`, which are read once when the plugin loads and must be set before sourcing.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
@@ -83,8 +83,8 @@ All options are environment variables. Set them before or after sourcing.
 | `ZSH_AI_EFFORT` | `low` | Effort level passed to either backend. Low keeps TAB snappy |
 | `ZSH_AI_THINKING` | `disabled` | Thinking mode for the api backend, `disabled` or `adaptive` |
 | `ZSH_AI_MAX_TOKENS` | `512` | Output cap, api backend only |
-| `ZSH_AI_PREFIX` | `AI` | Trigger word at the start of the buffer |
-| `ZSH_AI_KEY` | `^I` (TAB) | Key to bind. Set to an empty string to bind nothing and call `bindkey` yourself |
+| `ZSH_AI_PREFIX` | `AI` | Trigger word at the start of the buffer. Set before sourcing |
+| `ZSH_AI_KEY` | `^I` (TAB) | Key to bind. Set to an empty string to bind nothing and call `bindkey` yourself. Set before sourcing |
 | `ZSH_AI_DEBUG` | unset | File path. When set, the last raw response is written there |
 
 Examples:

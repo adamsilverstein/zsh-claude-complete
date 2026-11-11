@@ -16,7 +16,8 @@
 #   Default: "api" when ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN is set,
 #   otherwise "cli".
 #
-# Options (all environment variables, set before sourcing or any time after):
+# Options (all environment variables, set before sourcing or any time after,
+# except ZSH_AI_PREFIX and ZSH_AI_KEY, which are read once at source time):
 #   ZSH_AI_PREFIX    Trigger word at the start of the buffer. Default: "AI"
 #   ZSH_AI_MODEL     Model id. Default: claude-sonnet-5
 #   ZSH_AI_EFFORT    Effort level passed to either backend. Default: low
