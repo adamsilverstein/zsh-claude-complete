@@ -20,14 +20,31 @@ Inspired by [tott/zsh-ai-complete](https://github.com/tott/zsh-ai-complete), whi
 
 ## Install
 
-Clone and source the plugin from `.zshrc`:
+One line, then open a new terminal:
+
+```zsh
+curl -fsSL https://raw.githubusercontent.com/adamsilverstein/zsh-claude-complete/main/install.sh | sh
+```
+
+The script clones the plugin to `~/.zsh/zsh-claude-complete` and adds a `source` line to `~/.zshrc`. If Oh My Zsh is installed, it clones into the Oh My Zsh custom plugins directory instead and tells you to add `zsh-claude-complete` to `plugins=(...)`. Run it again to update; run it with `--uninstall` (`sh install.sh --uninstall`) to remove the line it added. Set `ZSH_AI_INSTALL_DIR` to clone somewhere else.
+
+### With a plugin manager
+
+| Manager | Add to `.zshrc` |
+| --- | --- |
+| Oh My Zsh | `git clone https://github.com/adamsilverstein/zsh-claude-complete ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-claude-complete`, then add `zsh-claude-complete` to `plugins=(...)` |
+| zinit | `zinit light adamsilverstein/zsh-claude-complete` |
+| antidote | `adamsilverstein/zsh-claude-complete` in `~/.zsh_plugins.txt` |
+| antigen | `antigen bundle adamsilverstein/zsh-claude-complete` |
+| zplug | `zplug "adamsilverstein/zsh-claude-complete"` |
+| sheldon | `sheldon add zsh-claude-complete --github adamsilverstein/zsh-claude-complete` |
+
+### By hand
 
 ```zsh
 git clone https://github.com/adamsilverstein/zsh-claude-complete ~/.zsh/zsh-claude-complete
 echo 'source ~/.zsh/zsh-claude-complete/zsh-claude-complete.plugin.zsh' >> ~/.zshrc
 ```
-
-Or with a plugin manager, point it at the repo and it will pick up `zsh-claude-complete.plugin.zsh`.
 
 Reload the shell.
 
@@ -114,14 +131,39 @@ The plugin sends a short system prompt with your OS, zsh version, and working di
 
 With the `api` backend the request body is built with `jq`, so quotes and newlines in your request are always valid JSON. With the `cli` backend it first checks `claude auth status` (about a tenth of a second), then calls `claude -p` with no tools, no settings, no MCP servers, and no session persistence, so nothing is executed and nothing is saved. If you are signed out it stops with a pointer to `zsh_ai_login` instead of making a request.
 
-## Testing
+## Development
 
-`test/smoke.zsh` sources the plugin and generates a command for a fixed prompt on whichever backend is configured. `test/login-guidance.zsh` points Claude Code at an empty config directory to check the signed-out message without touching your real login:
+Clone the repo and load your clone in place:
 
 ```zsh
-zsh test/smoke.zsh
-ZSH_AI_BACKEND=cli zsh test/smoke.zsh
-zsh test/login-guidance.zsh
+git clone https://github.com/adamsilverstein/zsh-claude-complete
+cd zsh-claude-complete
+make install    # adds a source line for this clone to ~/.zshrc
+```
+
+Run the tests with `make test`. It needs only zsh and jq: `claude` and `curl` are replaced by the stubs in `test/stubs`, so no login, API key, or network is needed. CI runs the same target on Linux and macOS.
+
+| Command | What it runs |
+| --- | --- |
+| `make test` | Syntax check, offline unit tests, and the install script test |
+| `make test-unit` | `test/unit/*.zsh` only. Pass files to `zsh test/run.zsh` to run a subset |
+| `make test-install` | `install.sh` against a throwaway `HOME` |
+| `make test-live` | `test/live/*.zsh` against real Claude. Needs Claude Code signed in or `ANTHROPIC_API_KEY` |
+
+A unit test is a `test_*` function in a file under `test/unit`. Each runs in a fresh shell with the plugin loaded, using the helpers in `test/lib.zsh`:
+
+~~~zsh
+test_code_fences_are_stripped() {
+  export STUB_CLAUDE_LOGGED_IN=true STUB_CLAUDE_OUT=$'```bash\nls -la\n```'
+  assert_eq 'ls -la' "$(zsh_ai_generate list files)"
+}
+~~~
+
+The live tests call Claude for real. `test/live/smoke.zsh` generates a command for a fixed prompt on whichever backend is configured, and `test/live/login-guidance.zsh` points Claude Code at an empty config directory to check the signed-out message without touching your real login:
+
+```zsh
+zsh test/live/smoke.zsh
+ZSH_AI_BACKEND=cli zsh test/live/smoke.zsh
 ```
 
 ## Credits
