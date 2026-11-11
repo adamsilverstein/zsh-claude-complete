@@ -12,6 +12,16 @@ trap 'rm -rf "$tmp"' EXIT
 export CLAUDE_CONFIG_DIR="$tmp"
 unset ZSH_AI_BACKEND ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN
 
+# Without Claude Code installed, the plugin stops at "claude CLI not found"
+# before the login check, so stand in a signed-out claude.
+if (( ! $+commands[claude] )); then
+  mkdir "$tmp/bin"
+  print -r -- $'#!/bin/sh\n[ "$1 $2" = "auth status" ] && echo \'{"loggedIn": false}\'\nexit 1' > "$tmp/bin/claude"
+  chmod +x "$tmp/bin/claude"
+  path=("$tmp/bin" $path)
+  rehash
+fi
+
 print -r -- "backend: $(_zsh_ai_backend)"
 [[ "$(_zsh_ai_backend)" == cli ]] || { print "FAIL: expected cli backend when no key is set" >&2; exit 1; }
 
