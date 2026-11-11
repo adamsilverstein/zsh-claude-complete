@@ -1,0 +1,17 @@
+#!/bin/sh
+# Stand-in for curl. Records the arguments and prints STUB_CURL_OUT.
+#   STUB_LOG        file that receives one line per argument (newlines become
+#                   spaces); the -d request body also goes to $STUB_LOG.body
+#   STUB_CURL_OUT   response body to print
+#   STUB_CURL_EXIT  exit status (default 0)
+{
+  printf 'curl\n'
+  for arg in "$@"; do printf '%s' "$arg" | tr '\n' ' '; printf '\n'; done
+} >> "${STUB_LOG:-/dev/null}"
+prev=
+for arg in "$@"; do
+  [ "$prev" = -d ] && printf '%s' "$arg" > "${STUB_LOG:-/dev/null}.body"
+  prev=$arg
+done
+printf '%s\n' "${STUB_CURL_OUT-}"
+exit "${STUB_CURL_EXIT:-0}"

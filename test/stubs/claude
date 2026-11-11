@@ -1,0 +1,24 @@
+#!/bin/sh
+# Stand-in for the Claude Code CLI. Records each call and replies from
+# environment variables set by the test.
+#   STUB_LOG              file that receives one line per call (newlines in
+#                         arguments become spaces)
+#   STUB_CLAUDE_LOGGED_IN "true" or "false" for `auth status --json`
+#   STUB_CLAUDE_OUT       text printed for `-p` requests
+#   STUB_CLAUDE_EXIT      exit status for `-p` requests (default 0)
+{
+  printf 'claude'
+  for arg in "$@"; do printf ' [%s]' "$arg" | tr '\n' ' '; done
+  printf ' key=[%s] token=[%s]\n' "${ANTHROPIC_API_KEY-}" "${ANTHROPIC_AUTH_TOKEN-}"
+} >> "${STUB_LOG:-/dev/null}"
+
+if [ "$1" = auth ] && [ "$2" = status ]; then
+  printf '{\n  "loggedIn": %s\n}\n' "${STUB_CLAUDE_LOGGED_IN:-false}"
+  [ "${STUB_CLAUDE_LOGGED_IN:-false}" = true ]
+  exit $?
+fi
+if [ "$1" = auth ] && [ "$2" = login ]; then
+  exit "${STUB_CLAUDE_LOGIN_EXIT:-1}"
+fi
+printf '%s\n' "${STUB_CLAUDE_OUT-}"
+exit "${STUB_CLAUDE_EXIT:-0}"

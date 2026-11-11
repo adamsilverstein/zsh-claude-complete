@@ -2,9 +2,9 @@
 # Verifies the guidance shown when Claude Code is not logged in.
 # An empty CLAUDE_CONFIG_DIR makes the claude CLI report "not logged in"
 # without touching the real login, so this runs safely anywhere.
-# Usage: zsh test/login-guidance.zsh
+# Usage: zsh test/live/login-guidance.zsh
 here="${0:A:h}"
-ZSH_AI_KEY="" source "$here/../zsh-claude-complete.plugin.zsh"
+ZSH_AI_KEY="" source "$here/../../zsh-claude-complete.plugin.zsh"
 
 tmp=$(mktemp -d -t zsh-ai-login.XXXXXX)
 trap 'rm -rf "$tmp"' EXIT
